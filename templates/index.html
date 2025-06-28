@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Predictive Keyboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        input, button { font-size: 1.2em; }
+        #prediction { margin-top: 20px; font-weight: bold; }
+        #suggestions { margin-top: 10px; }
+        .suggestion { 
+            display: inline-block; 
+            background: #eee; 
+            margin: 2px; 
+            padding: 5px 10px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+        }
+        .suggestion:hover { background: #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Predictive Keyboard</h1>
+    <input type="text" id="seed" placeholder="Type your seed phrase..." size="40" oninput="fetchSuggestions()">
+    <input type="number" id="n_words" value="1" min="1" max="10" style="width: 60px;">
+    <button onclick="getPrediction()">Predict</button>
+    <div id="suggestions"></div>
+    <div id="prediction"></div>
+    <script>
+        function getPrediction() {
+            const seed = document.getElementById('seed').value;
+            const n_words = document.getElementById('n_words').value;
+            fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ seed: seed, n_words: n_words })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('prediction').innerText = "Prediction: " + data.prediction;
+            });
+        }
+
+        function fetchSuggestions() {
+            const seed = document.getElementById('seed').value;
+            if (!seed.trim()) {
+                document.getElementById('suggestions').innerHTML = '';
+                return;
+            }
+            fetch('/autocomplete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ seed: seed, top_n: 3 })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const suggestionsDiv = document.getElementById('suggestions');
+                suggestionsDiv.innerHTML = '';
+                data.suggestions.forEach(word => {
+                    const span = document.createElement('span');
+                    span.className = 'suggestion';
+                    span.innerText = word;
+                    span.onclick = function() {
+                        document.getElementById('seed').value += ' ' + word;
+                        document.getElementById('suggestions').innerHTML = '';
+                        fetchSuggestions(); 
+                    };
+                    suggestionsDiv.appendChild(span);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
